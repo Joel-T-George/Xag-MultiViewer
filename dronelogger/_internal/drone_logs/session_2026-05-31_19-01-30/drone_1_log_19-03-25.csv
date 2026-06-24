@@ -1,1 +1,0 @@
-unix_timestamp,datetime,elapsed_sec,lat,lon,alt_asl_m,alt_agl_m,fix_type,satellites,ground_speed_mps,heading_deg,climb_rate_mps,roll_deg,pitch_deg,yaw_deg,flight_mode,battery_v,battery_pct,battery_current_a,system_id
