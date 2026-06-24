@@ -336,7 +336,7 @@ void CreateCameraDialog::updatePipelinePreview()
     // Primary
     if (draft.type == CameraDraft::Type::RTSP && !draft.primaryUrl.isEmpty()) {
         draft.primaryPipeline =
-            QString("rtspsrc location=%1 latency=50 ! decodebin ! videoconvert ! glimagesink sync=false")
+            QString("rtspsrc location=%1 latency=50  drop-on-latency=true buffer-mode=0 ! decodebin ! queue leaky=downstream max-size-buffers=1 max-size-time=0 max-size-bytes=0 ! videoconvert ! glimagesink sync=false")
             .arg(draft.primaryUrl);
     } 
     else if(draft.type == CameraDraft::Type::USB)
@@ -359,7 +359,7 @@ void CreateCameraDialog::updatePipelinePreview()
     // Secondary
     if (draft.secondaryEnabled && !draft.secondaryUrl.isEmpty()) {
         draft.secondaryPipeline =
-            QString("rtspsrc location=%1 latency=100 ! decodebin ! videoconvert ! glimagesink sync=false")
+            QString("rtspsrc location=%1 latency=50  drop-on-latency=true buffer-mode=0 ! decodebin ! queue leaky=downstream max-size-buffers=1 max-size-time=0 max-size-bytes=0 ! videoconvert ! glimagesink sync=false")
             .arg(draft.secondaryUrl);
         secondaryPipelineLabel->setText(draft.secondaryPipeline);
         secondaryPipelineLabel->show();

@@ -1,7 +1,6 @@
 #include "HomeTab.h"
 #include "VideoWidget.h"
 #include "CameraInstance.h"
-#include "OverlayWidget.h"
 #include <QGridLayout>
 #include <QPushButton>
 #include <QLabel>
@@ -249,7 +248,10 @@ QWidget* HomeTab::createControlPanel()
     });
     connect(btnRec, &QPushButton::pressed, this, [=]() {
         for (auto* cam : selectedCameras)
+        {
             cam->control(ControlCommand::REC,0,0);
+            onRecordClicked(cam->ip);
+        }
     });
     connect(btnPhot, &QPushButton::pressed, this, [=]() {
         for (auto* cam : selectedCameras)
@@ -262,6 +264,10 @@ QWidget* HomeTab::createControlPanel()
     connect(btnMap, &QPushButton::pressed, this, [=]() {
         for (auto* cam : selectedCameras)
             cam->control(ControlCommand::LOOK_DOWN,0,0);
+
+
+
+
     });
     // connect(btnTrackEnable, &QPushButton::pressed, this, [=]() {
     //     for (auto* cam : selectedCameras)
@@ -280,6 +286,35 @@ QWidget* HomeTab::createControlPanel()
             cam->control(ControlCommand::OSDOFF,0,0);
     });
     return panel;
+}
+
+void HomeTab::onRecordClicked(QString camip)
+{
+    QString filePath =
+        QCoreApplication::applicationDirPath()
+        + "/record_log.txt";
+
+    QFile file(filePath);
+
+    if (file.open(QIODevice::Append |
+                  QIODevice::Text))
+    {
+        QTextStream out(&file);
+
+        QString timestamp =
+            QDateTime::currentDateTime()
+                .toString(
+                    "yyyy-MM-dd hh:mm:ss.zzz"
+                    );
+
+        out << "REC START : "
+            << timestamp
+            << "  "
+            << camip
+            << "\n";
+
+        file.close();
+    }
 }
 void HomeTab::setCamera(QVector<CameraInstance*>*cams)
 {
@@ -303,11 +338,7 @@ void HomeTab::setCamera(QVector<CameraInstance*>*cams)
         cameraList->addItem(item);
         v->addWidget(label);
         v->addWidget(video,1);
-        overlay = new OverlayWidget(container);
-
-        overlay->setGeometry(container->rect());
-
-        overlay->raise();
+    
 
         itemToCamera[item] = cam;
         cameraToItem[cam] = item;

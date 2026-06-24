@@ -2,18 +2,18 @@
 ; SEE THE DOCUMENTATION FOR DETAILS ON CREATING INNO SETUP SCRIPT FILES!
 ; Non-commercial use only
 
-#define MyAppName "Xag Multiviewer"
-#define MyAppVersion "1.0"
+#define MyAppName "Xag Multiviewer V17-1"
+#define MyAppVersion "1.17"
 #define MyAppPublisher "Xagrotor Tek Private LTD"
 #define MyAppExeName "xagcamera.exe"
-#define MyAppAssocName "Xag Mulit Viewer Setup"
+#define MyAppAssocName "Xag Mulit Viewer Setup 17"
 #define MyAppAssocExt ".msi"
 #define MyAppAssocKey StringChange(MyAppAssocName, " ", "") + MyAppAssocExt
 
 [Setup]
 ; NOTE: The value of AppId uniquely identifies this application. Do not use the same AppId value in installers for other applications.
 ; (To generate a new GUID, click Tools | Generate GUID inside the IDE.)
-AppId={{7ADACC13-6E01-4723-B252-FCFAD2D1987F}
+AppId={{7ADACC13-6E01-4723-B252-FCFAD2D1765}
 AppName={#MyAppName}
 AppVersion={#MyAppVersion}
 ;AppVerName={#MyAppName} {#MyAppVersion}
@@ -34,7 +34,7 @@ DisableProgramGroupPage=yes
 ;PrivilegesRequired=lowest
 PrivilegesRequiredOverridesAllowed=commandline
 OutputDir=D:\xagcamera
-OutputBaseFilename=Deployment
+OutputBaseFilename=xag_multiviewersetupv17
 SetupIconFile=D:\xagcamera\resources\icons\xag.ico
 SolidCompression=yes
 WizardStyle=modern dynamic windows11

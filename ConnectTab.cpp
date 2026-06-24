@@ -6,6 +6,8 @@
 #include "CreateCameraDialog.h"
 #include <QMessageBox>
 #include "EditCameraDialog.h"
+#include <QProcess>
+#include <QDir>
 
 #include <QVBoxLayout>
 #include <QLineEdit>
@@ -22,16 +24,39 @@ ConnectTab::ConnectTab(CameraManager* manager,QVector<CameraInstance*>* cams,
     root->setContentsMargins(5, 5, 5, 5);
     root->setSpacing(5);
 
-    QPushButton *createBtn = new QPushButton("Create Camera");
+
+
+    auto *createBtn = new QPushButton("Create Camera");
     createBtn->setFixedHeight(32);
 
-    root->addWidget(createBtn, 0,Qt::AlignCenter );
+
+
+
+
+    // // IMPORTANT: prevent ugly stretching
+    // grid->setColumnStretch(0, 1);
+    // grid->setColumnStretch(1, 1);
+    // grid->setColumnStretch(2, 0);   // button fixed
+
+
+
+    QHBoxLayout *centerRow = new QHBoxLayout();
+
+    centerRow->addStretch();
+    centerRow->addWidget(createBtn);
+
+    centerRow->addStretch();
+    centerRow->setSpacing(5);
+    root->addLayout(centerRow);
+
+
+    // root->addWidget(createBtn, 0,Qt::AlignCenter );
 
     cardsContainer = new QWidget(this);
 
     listLayout = new QGridLayout(cardsContainer);
-    listLayout->setSpacing(1);
-    listLayout->setContentsMargins(2, 2, 2, 2);
+    listLayout->setSpacing(2);
+    listLayout->setContentsMargins(1, 1, 1, 1);
 
     cardsContainer->setLayout(listLayout);
 
@@ -39,6 +64,8 @@ ConnectTab::ConnectTab(CameraManager* manager,QVector<CameraInstance*>* cams,
 
     connect(createBtn, &QPushButton::clicked,
         this, &ConnectTab::onCreateCamera);
+
+    // connect(LoggerBtn, &QPushButton::clicked, this, &ConnectTab::openLogger);
 
 
     // g_pipelineEdit = new QLineEdit(this);

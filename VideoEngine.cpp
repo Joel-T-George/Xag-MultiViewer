@@ -19,11 +19,11 @@ void VideoEngine::startEngine()
 
 void VideoEngine::run()
 {
-    qDebug() << "[VideoEngine] Thread started";
+    // qDebug() << "[VideoEngine] Thread started";
 
     exec();   // Qt event loop (critical)
 
-    qDebug() << "[VideoEngine] Thread exiting";
+    // qDebug() << "[VideoEngine] Thread exiting";
 }
 
 void VideoEngine::shutdown()
@@ -31,7 +31,7 @@ void VideoEngine::shutdown()
     if (!isRunning())
         return;
 
-    qDebug() << "[VideoEngine] Shutting down";
+    // qDebug() << "[VideoEngine] Shutting down";
 
     quit();        // stop event loop
     wait();        // block until finished

@@ -7,7 +7,11 @@
 #include <QMap>
 #include <QGridLayout>
 #include "CameraInstance.h"
-#include "OverlayWidget.h"
+#include <QFile>
+#include <QTextStream>
+#include <QDateTime>
+#include <QCoreApplication>
+
 
 class CameraInstance;
 class VideoWidget;
@@ -30,7 +34,8 @@ public:
     QWidget* createControlPanel();
     void selectAllCameras();
     void unselectAllCameras();
-    OverlayWidget *overlay;
+    void onRecordClicked(QString camip);
+
 
 
 

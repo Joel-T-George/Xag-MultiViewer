@@ -10,13 +10,17 @@ CameraManager::CameraManager(QObject* parent)
 {
 }
 
+
+
 void CameraManager::add(CameraInstance* cam) {
     cameras.append(cam);
+
     saveToFile();
 }
 
 void CameraManager::remove(CameraInstance* cam) {
     cameras.removeOne(cam);
+
 
     saveToFile();
 }

@@ -27,6 +27,7 @@ class ConnectTab : public QWidget
 
     private slots:
         void onCreateCamera();
+
         void onCameraUpdated(CameraInstance *camera);
 
         void startCamera(CameraInstance *camera);

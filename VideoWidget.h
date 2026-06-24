@@ -4,8 +4,14 @@
 #include <gst/gst.h>
 #include <gst/video/videooverlay.h>
 #include "CameraInstance.h"
+#include "LrfWorker.h"
 #include <QComboBox>
 #include <QLabel>
+#include <QThread>
+#include <QPushButton>
+
+class LrfWorker;
+
 
 class VideoWidget : public QWidget
 {
@@ -22,7 +28,7 @@ class VideoWidget : public QWidget
         void stop();
         bool event(QEvent* event) override;
         CameraInstance *cam=nullptr;
-        void resetPipeline();
+       
         void updatePaletteControls();
 
         void showEvent(QShowEvent* event) override;
@@ -30,8 +36,17 @@ class VideoWidget : public QWidget
         void exitFullScreen();
         bool isFullscreen = false;
         bool isTracking = false;
-        void setLRFText(const QString& text);
-        QLabel* lrfLabel;
+        void stopLrf();
+        void resetPipeline();
+
+
+
+        bool lrfEnabled = false;
+
+    private slots:
+        void toggleLrf();
+        void onDistanceUpdated(double meters);
+        
 
     
     signals:
@@ -53,13 +68,15 @@ class VideoWidget : public QWidget
         QWidget* originalParent = nullptr;
         QLayout* originalLayout = nullptr;
         QComboBox*paletteDropdown = nullptr;
+        QLabel *lrfLabel = nullptr;
+        QPushButton * lrfButton = nullptr;
+        QThread *lrfThread = nullptr;
+        LrfWorker *lrfWorker = nullptr;
         QWidget* createRightControlPanel();
         int originalIndex = -1;
-        QString lrfText = "LRF 000";
-
+       
 
     protected:
-        void paintEvent(QPaintEvent *event) override;
         void mouseDoubleClickEvent(QMouseEvent* event) override;
         void mousePressEvent(QMouseEvent* e) override;
 

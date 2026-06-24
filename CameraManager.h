@@ -15,6 +15,7 @@ public:
     void add(CameraInstance* cam);
     void remove(CameraInstance* cam);
 
+
     void saveToFile();
     void loadFromFile();
 };

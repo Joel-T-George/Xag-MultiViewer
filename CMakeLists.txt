@@ -8,6 +8,7 @@ set(CMAKE_AUTORCC ON)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_BUILD_TYPE Release)
 
 
 set(PKG_CONFIG_EXECUTABLE "C:/pkg-config/bin/pkg-config.exe")
@@ -18,6 +19,7 @@ find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Widgets LinguistTools Mul
 find_package(PkgConfig REQUIRED)
 
 qt_policy(SET QTP0002 NEW)
+
 
 
 
@@ -74,7 +76,9 @@ endif()
 set(TS_FILES xagcamera_en_IN.ts)
 
 set(PROJECT_SOURCES
+
         main.cpp
+        LrfWorker.cpp
         mainwindow.cpp
         VideoWidget.cpp
         HomeTab.cpp
@@ -85,10 +89,9 @@ set(PROJECT_SOURCES
         EditCameraDialog.cpp
         VideoEngine.cpp
         CameraManager.cpp
-        OverlayWidget.cpp
         
         CameraDraft.h
-        OverlayWidget.h
+        LrfWorker.h
         CameraManager.h
         SkydroidDriver.h
         VideoWidget.h
@@ -110,13 +113,20 @@ if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
         MANUAL_FINALIZATION
         ${PROJECT_SOURCES}
         resources.qrc
+        app.rc
     )
     
     # set_property(TARGET xagcamera APPEND PROPERTY
     # QT_ANDROID_PACKAGE_SOURCE_DIR
     # ${CMAKE_CURRENT_SOURCE_DIR}/android
 
+    # add_custom_command(
+    #     TARGET xagcamera POST_BUILD
 
+    #     COMMAND ${CMAKE_COMMAND} -E copy_directory
+    #     ${LOGGER_SOURCE_DIR}
+    #     $<TARGET_FILE_DIR:xagcamera>/dronelogger
+    # )
 
 # Define target properties for Android with Qt 6 as:
 #    set_property(TARGET xagcamera APPEND PROPERTY QT_ANDROID_PACKAGE_SOURCE_DIR
@@ -181,6 +191,22 @@ endif()
 set_target_properties(xagcamera PROPERTIES
     OUTPUT_NAME "xagcamera"
 )
+
+target_compile_options(xagcamera PRIVATE
+    /O2
+    /GL
+)
+
+target_link_options(xagcamera PRIVATE
+    /LTCG
+)
+
+add_custom_command(TARGET xagcamera POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E echo
+    "C:/gstreamer/1.0/msvc_x86_64"
+    > "$<TARGET_FILE_DIR:xagcamera>/gstreamer.txt"
+)
+
 
 # Qt for iOS sets MACOSX_BUNDLE_GUI_IDENTIFIER automatically since Qt 6.1.
 # If you are developing for iOS or macOS you should consider setting an

@@ -1,5 +1,4 @@
 #include "VideoWidget.h"
-// #include "OverlayWidget.h"
 #include <QMouseEvent>
 #include <QEvent>
 #include <QLayout>
@@ -8,8 +7,8 @@
 #include <QDebug>
 #include <QPushButton>
 #include <QComboBox>
-#include <QPaintEvent>
-#include <QPainter>
+
+
 VideoWidget::VideoWidget(QWidget *parent)
     : QWidget(parent)
 {
@@ -25,7 +24,16 @@ VideoWidget::VideoWidget(QWidget *parent)
 
 VideoWidget::~VideoWidget()
 {
+    stopLrf();
+    if (fullScreenWindow)
+    {
+        fullScreenWindow->close();
+        fullScreenWindow->deleteLater();
+        fullScreenWindow = nullptr;
+    }
     stop();
+
+
     emit stopRequested();
 }
 WId VideoWidget::nativeHandle() const
@@ -45,7 +53,12 @@ void VideoWidget::mouseDoubleClickEvent(QMouseEvent* event)
             // ENTER FULLSCREEN
 
             originalParent = parentWidget();
+            if (!originalParent)
+                return;
             originalLayout = originalParent->layout();
+
+            if (!originalLayout)
+                return;
 
             fullScreenWindow = new QWidget();
             fullScreenWindow->setWindowFlags(Qt::Window);
@@ -82,41 +95,8 @@ void VideoWidget::mouseDoubleClickEvent(QMouseEvent* event)
         }
     }
 }
-void VideoWidget::setLRFText(const QString &text)
-{
-    lrfLabel->setText(text);
 
-    lrfLabel->raise();
-}
-void VideoWidget::paintEvent(QPaintEvent *event)
-{
-    QWidget::paintEvent(event);
 
-    QPainter p(this);
-
-    p.setRenderHint(QPainter::Antialiasing);
-
-    // Black background box
-    p.fillRect(
-        QRect(20,20,160,40),
-        QColor(0,0,0,150)
-        );
-
-    // Green text
-    p.setPen(Qt::green);
-
-    QFont font;
-    font.setPointSize(14);
-    font.setBold(true);
-
-    p.setFont(font);
-
-    p.drawText(
-        QRect(30,20,140,40),
-        Qt::AlignVCenter,
-        lrfText
-        );
-}
 void VideoWidget::mousePressEvent(QMouseEvent* e)
 {
     if (!fullScreenWindow)
@@ -173,13 +153,28 @@ void VideoWidget::exitFullScreen()
     if (!fullScreenWindow)
         return;
 
+    stopLrf();
 
-    this->setParent(originalParent);
-    originalLayout->addWidget(this);
+    QWidget *window = fullScreenWindow;
 
-    fullScreenWindow->close();
-    delete fullScreenWindow;
     fullScreenWindow = nullptr;
+    isFullscreen = false;
+    lrfWorker = nullptr;
+    lrfLabel = nullptr;
+    lrfButton = nullptr;
+    lrfThread = nullptr;
+    paletteDropdown = nullptr;
+
+    this->setParent(nullptr);
+
+    if (originalLayout)
+        originalLayout->addWidget(this);
+
+    this->show();
+    this->raise();
+
+    window->close();
+    window->deleteLater();
 }
 
 QWidget* VideoWidget::createRightControlPanel()
@@ -226,6 +221,11 @@ QWidget* VideoWidget::createRightControlPanel()
     QPushButton* btnMap = new QPushButton("Mapping");
     QPushButton* btnFPV = new QPushButton("FPV");
 
+    lrfButton = new QPushButton("LRF On");
+
+
+    lrfLabel =  new QLabel("No LRF Readings");
+
     QPushButton* btnTrackEnable = new QPushButton("Track Enable");
 
     QPushButton* btnSwitchCamera = new QPushButton("Switch Stream");
@@ -249,14 +249,14 @@ QWidget* VideoWidget::createRightControlPanel()
     isTracking = false;
 
 
-    QList<QPushButton*> presets = {btnZin, btnZot, btnRec,btnRecstop,btnOsdOn,btnOsdOff, btnPhot, btnMap,btnFPV,btnTrackEnable,btnSwitchCamera};
+    QList<QPushButton*> presets = {btnZin, btnZot, btnRec,btnRecstop,btnOsdOn,btnOsdOff, btnPhot, btnMap,btnFPV,btnTrackEnable,btnSwitchCamera, lrfButton};
 
     for (auto* b : presets) {
         b->setStyleSheet("background:#3a3a3a;color:white;");
-        v->addWidget(b);
+
     }
     paletteDropdown->setStyleSheet("background:#3a3a3a;color:white;");
-    v->addWidget(paletteDropdown);
+
     grid2->addWidget(btnZin,0,0);
     grid2->addWidget(btnZot,0,1);
     grid2->addWidget(btnRec,1,0);
@@ -270,7 +270,9 @@ QWidget* VideoWidget::createRightControlPanel()
     grid2->addWidget(btnSwitchCamera,5,0);
     
     grid2->addWidget(paletteDropdown, 5,1);
-    
+    grid2->addWidget(lrfButton, 6,0);
+    grid2->addWidget(lrfLabel,7,0 );
+
 
     v->addLayout(grid2);
     v->addStretch();
@@ -355,6 +357,7 @@ QWidget* VideoWidget::createRightControlPanel()
     connect(btnMap, &QPushButton::pressed, this, [=]() {
         emit controlRequested(ControlCommand::LOOK_DOWN,0,0);
     });
+    connect(lrfButton , &QPushButton::clicked,this, &VideoWidget::toggleLrf );
 
     connect(btnSwitchCamera,&QPushButton::clicked,this,[=](){
 
@@ -370,6 +373,17 @@ QWidget* VideoWidget::createRightControlPanel()
         resetPipeline();
     });
     return panel;
+}
+
+void VideoWidget::resetPipeline()
+{
+    if(!cam)
+        return;
+    stop();
+    update();
+    QCoreApplication::processEvents();
+    start(cam->pipeline);
+    update();
 }
 void VideoWidget::updatePaletteControls()
 {
@@ -405,24 +419,90 @@ void VideoWidget::updatePaletteControls()
         );
     }
 }
-void VideoWidget::resetPipeline()
+
+void VideoWidget::toggleLrf()
 {
-    if (!cam)
+    if (!lrfWorker)
+    {
+        lrfThread = new QThread(this);
+
+        lrfWorker = new LrfWorker();
+        lrfWorker->setCamera(
+            cam->ip,
+            cam->port
+            );
+
+        lrfWorker->moveToThread(lrfThread);
+
+        connect(
+            lrfThread,
+            &QThread::started,
+            lrfWorker,
+            &LrfWorker::start
+            );
+        connect(
+            lrfWorker,
+            &LrfWorker::distanceUpdated,
+            this,
+            &VideoWidget::onDistanceUpdated
+            );
+
+        connect(
+            lrfThread,
+            &QThread::finished,
+            lrfWorker,
+            &QObject::deleteLater
+            );
+
+
+
+        lrfThread->start();
+        lrfEnabled = true;
+
+        lrfButton->setText("LRF OFF");
+    }
+    else
+    {
+        stopLrf();
+    }
+}
+
+void VideoWidget::stopLrf()
+{
+    if (!lrfWorker)
         return;
 
-    stop();
+    // stop inside worker thread
+    QMetaObject::invokeMethod(
+        lrfWorker,
+        "stop"
 
-    update();
-    repaint();
+        );
 
-    QCoreApplication::processEvents();
+    if (lrfThread)
+    {
+        lrfThread->quit();
+        lrfThread->wait();
 
-    start(cam->pipeline);
+        lrfThread->deleteLater();
+        lrfThread = nullptr;
+    }
+    lrfEnabled = false;
 
-
+    lrfWorker = nullptr;
+    lrfButton->setText("LRF ON");
+    lrfLabel->setText("No LRF Readings");
+}
+void VideoWidget::onDistanceUpdated(double meters)
+{
+    lrfLabel->setText(
+        QString("LRF %1 m")
+            .arg(meters,0,'f',2)
+        );
 
     update();
 }
+
 bool VideoWidget::event(QEvent* event)
 {
     if (event->type() == QEvent::KeyPress)
@@ -496,7 +576,7 @@ void VideoWidget::start(const QString &pipelineStr)
 
 #else
 
-    sink = gst_element_factory_make("d3d11videosink", NULL);
+    // sink = gst_element_factory_make("glimagesink", NULL);
 
     WId winId = this->winId();
 
@@ -515,18 +595,22 @@ void VideoWidget::start(const QString &pipelineStr)
 
 void VideoWidget::stop()
 {
-    if (pipeline) {
-        gst_element_set_state(pipeline, GST_STATE_NULL);
-        gst_object_unref(pipeline);
-        pipeline = nullptr;
+
+    if (!pipeline)
+        return;
+
+
+    gst_element_set_state(pipeline, GST_STATE_NULL);
+    gst_object_unref(pipeline);
+    pipeline = nullptr;
         
-    }
+
 }
 
 void VideoWidget::showEvent(QShowEvent *event)
 {
     QWidget::showEvent(event);
-    qDebug() << "[VideoWidget] show Event";
+    // qDebug() << "[VideoWidget] show Event";
     emit visible();
     if(m_connected && !pipeline){
 
@@ -541,6 +625,6 @@ void VideoWidget::hideEvent(QHideEvent *event)
 {
     QWidget::hideEvent(event);
     emit hidden();
-    qDebug() << "[VideoWidget] hide Event";
-    stop();
+    // qDebug() << "[VideoWidget] hide Event";
+
 }

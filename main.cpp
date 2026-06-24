@@ -3,11 +3,44 @@
 #include <gst/gst.h>
 #include "MainWindow.h"
 #include <QFile>
+#include <QMessageBox>
+#include <QDateTime>
+#include <QFile>
+#include <QDir>
 
 
 static void initGStreamer(const QString& appDir)
 {
-        QString gstRoot = "C:/gstreamer/1.0/msvc_x86_64";
+    QString configFile = appDir + "/gstreamer.txt";
+
+    QFile file(configFile);
+    if (!file.open(QIODevice::ReadOnly | QIODevice::Text))
+    {
+        QMessageBox::critical(nullptr,
+                              "GStreamer Error",
+                              "Unable to open:\n" + configFile);
+        return;
+    }
+
+    QString gstRoot = QString::fromUtf8(file.readAll()).trimmed();
+    file.close();
+
+    if (gstRoot.isEmpty())
+    {
+        QMessageBox::critical(nullptr,
+                              "GStreamer Error",
+                              "GStreamer path is empty in gstreamer.txt");
+        return;
+    }
+
+    QDir gstDir(gstRoot);
+    if (!gstDir.exists())
+    {
+        QMessageBox::critical(nullptr,
+                              "GStreamer Error",
+                              "GStreamer folder not found:\n" + gstRoot);
+        return;
+    }
 
 
         qputenv("PATH", (gstRoot + "/bin;" + qgetenv("PATH")).toLocal8Bit());
@@ -16,12 +49,38 @@ static void initGStreamer(const QString& appDir)
         qputenv("GST_REGISTRY",
         ( appDir + "/gst-registry.bin").toLocal8Bit());
 }
+void messageHandler(QtMsgType type,
+                    const QMessageLogContext &context,
+                    const QString &msg)
+{
+    QFile file("application.log");
 
+    if (file.open(QIODevice::Append | QIODevice::Text))
+    {
+        QTextStream out(&file);
+
+        out << QDateTime::currentDateTime()
+                   .toString("yyyy-MM-dd hh:mm:ss.zzz ")
+            << msg << "\n";
+    }
+
+    fprintf(stderr, "%s\n", msg.toUtf8().constData());
+
+    if (type == QtFatalMsg)
+    {
+        QMessageBox::critical(
+            nullptr,
+            "Fatal Error",
+            msg);
+    }
+}
 
 int main(int argc, char *argv[])
 {
-    QApplication app(argc, argv);
-    app.setApplicationName("Xag Multiviewer");
+    try{
+        qInstallMessageHandler(messageHandler);
+        QApplication app(argc, argv);
+        app.setApplicationName("Xag Multiviewer");
 
 
         app.setStyleSheet(R"(
@@ -226,9 +285,27 @@ QTabBar::tab:disabled {
         QIcon appIcon(":/resources/icons/xag.ico");
         // QApplication app(argc, argv);
         MainWindow w;
+        app.setWindowIcon(appIcon);
 
         w.setWindowTitle("Xag Multiviewer v1.0");
         w.setWindowIcon(appIcon);
         w.show();
         return app.exec();
+    }
+    catch (const std::exception &e)
+    {
+        QMessageBox::critical(
+            nullptr,
+            "Exception",
+            e.what());
+    }
+    catch (...)
+    {
+        QMessageBox::critical(
+            nullptr,
+            "Unknown Exception",
+            "Unhandled exception occurred.");
+    }
+
+    return -1;
 }
